@@ -1,0 +1,23 @@
+# Jev Gem Scan — router policy config
+#
+# Copy this file to `config.yaml` and edit. The router reads config.yaml if it
+# exists, otherwise falls back to this example, otherwise to built-in defaults.
+# Parsed by a tiny stdlib-only reader — no PyYAML needed for this flat schema.
+
+# Master switch. false = kill switch: every launch passes through with no Jev
+# call at all.
+enabled: true
+
+# Emergency bypass. true = same as the kill switch (no Jev call), but leaves
+# `enabled` untouched so you can flip it back fast.
+bypass_jev: false
+
+# shadow | active
+#   shadow -> score + log every launch, but NEVER surface an alert. Starts here
+#             on purpose: review gem_scan_log.jsonl before trusting active.
+#   active -> score, and only surface an alert for GEM verdicts whose
+#             confidence clears the threshold below.
+mode: shadow
+
+# active mode: only GEM verdicts strictly above this confidence fire an alert.
+gem_confidence_threshold: 0.85

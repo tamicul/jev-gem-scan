@@ -1,0 +1,5 @@
+# Jev Gem Scan has NO runtime dependencies.
+# It runs on the Python 3.8+ standard library alone (argparse, json, random).
+#
+# This file is intentionally empty of packages. Nothing here reaches a network,
+# an exchange, a wallet, or a real decision-model API.

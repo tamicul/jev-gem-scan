@@ -1,0 +1,23 @@
+== Jev Gem Scan v1.0.0 (DEMO - mocked decision model, no real trades) ==
+mode=shadow enabled=True bypass_jev=False seed=1
+
+[shadow] $GIGA582 -> GEM (0.92, lock=391d, top10=6%, social=97d) 414ms $0.00024
+[shadow] $ZAPX914 -> GEM (0.52, dev_wallet=76%, top10=43%, lock=199d, renounced, social=184d) 434ms $0.00044
+[shadow] $PEPE9923 -> GEM (0.72, top10=3%, social=97d) 421ms $0.00059
+[shadow] $ZAPX540 -> RUG (0.79, dev_wallet=94%, top10=76%, social=173d) 424ms $0.00050
+[shadow] $BONK948 -> RUG (0.99, honeypot=true, dev_wallet=92%, top10=42%, lock=11d, social=161d) 503ms $0.00025
+[shadow] $HODL917 -> RUG (0.60, dev_wallet=50%, top10=97%, lock=369d, social=171d) 394ms $0.00032
+[shadow] $NOVA996 -> RUG (0.99, honeypot=true, dev_wallet=50%, top10=85%, lock=255d) 613ms $0.00037
+[shadow] $FLOKI375 -> RUG (0.89, honeypot=true, dev_wallet=78%, top10=88%, lock=280d, social=169d) 720ms $0.00024
+[shadow] $FLOKI533 -> GEM (0.70, dev_wallet=73%, lock=201d, renounced, social=157d) 807ms $0.00043
+[shadow] $ATLAS9174 -> RUG (0.79, dev_wallet=98%, top10=50%, social=140d) 437ms $0.00036
+[shadow] $REKT975 -> GEM (0.57, dev_wallet=91%, lock=295d, social=186d) 205ms $0.00035
+[shadow] $PEPINU828 -> RUG (0.97, honeypot=true, dev_wallet=56%, top10=52%, renounced, social=93d) 783ms $0.00042
+
+-- summary --
+scanned:        12
+GEM:            5
+RUG:            7
+avg confidence: 0.788
+avg latency:    513 ms
+total sim cost: $0.00451
