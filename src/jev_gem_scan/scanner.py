@@ -4,6 +4,7 @@ from .database import connect,recent_seen,save
 from .providers.dexscreener import discover,enrich
 from .providers.solana_rpc import enrich_solana
 from .providers.deployer import enrich_deployer
+from .providers.pool_intelligence import enrich_pool
 from .router import route_launch
 
 def scan_once(config,limit=30,chain=None,db_path="data/gem_scan.db",dedupe_seconds=900):
@@ -14,7 +15,8 @@ def scan_once(config,limit=30,chain=None,db_path="data/gem_scan.db",dedupe_secon
             if recent_seen(db,c["chain_id"],c["token_address"],dedupe_seconds): continue
             f=enrich(c)
             if not f: continue
-            # Enrichments supply evidence to Jev; neither layer can make/veto the verdict.
+            # Evidence enrichment only: none of these layers can make/veto the verdict.
+            f=enrich_pool(f)
             if f.get("chain_id")=="solana":
                 f=enrich_solana(f)
                 f=enrich_deployer(f)
