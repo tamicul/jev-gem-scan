@@ -2,6 +2,7 @@
 import random, time
 from .database import connect,recent_seen,save
 from .providers.dexscreener import discover,enrich
+from .providers.solana_rpc import enrich_solana
 from .router import route_launch
 
 def scan_once(config,limit=30,chain=None,db_path="data/gem_scan.db",dedupe_seconds=900):
@@ -12,6 +13,8 @@ def scan_once(config,limit=30,chain=None,db_path="data/gem_scan.db",dedupe_secon
             if recent_seen(db,c["chain_id"],c["token_address"],dedupe_seconds): continue
             f=enrich(c)
             if not f: continue
+            # Native enrichment supplies evidence to Jev; it never makes/vetoes the verdict.
+            if f.get("chain_id")=="solana": f=enrich_solana(f)
             r,action=route_launch(f,config,rng)
             if action=="bypass": continue
             save(db,f,r,action); stats["scored"]+=1; stats["gems" if r["verdict"]=="GEM" else "rugs"]+=1
