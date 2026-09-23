@@ -5,6 +5,7 @@ from .providers.dexscreener import discover,enrich
 from .providers.solana_rpc import enrich_solana
 from .providers.deployer import enrich_deployer
 from .providers.pool_intelligence import enrich_pool
+from .providers.ownership import enrich_creator_ownership
 from .router import route_launch
 
 def scan_once(config,limit=30,chain=None,db_path="data/gem_scan.db",dedupe_seconds=900):
@@ -20,6 +21,8 @@ def scan_once(config,limit=30,chain=None,db_path="data/gem_scan.db",dedupe_secon
             if f.get("chain_id")=="solana":
                 f=enrich_solana(f)
                 f=enrich_deployer(f)
+                # Requires probable_deployer + token_supply discovered above.
+                f=enrich_creator_ownership(f)
             r,action=route_launch(f,config,rng)
             if action=="bypass": continue
             save(db,f,r,action); stats["scored"]+=1; stats["gems" if r["verdict"]=="GEM" else "rugs"]+=1
