@@ -55,8 +55,8 @@ def _page(path, verdict=None):
         trs.append("<tr><td>%s</td><td class='%s'>%s</td><td>%.2f</td><td>%s</td><td>%s</td><td>%s</td><td><a href='/scan?id=%s'>inspect</a></td></tr>" % (
             html.escape(r["symbol"] or "?"),cls,r["verdict"],r["confidence"] or 0,html.escape(r["action"] or ""),
             html.escape(str(f.get("liquidity_usd"))),html.escape(str(f.get("dev_wallet_pct"))),r["id"]))
-    body=cards+"<p><a href='/'>All</a> | <a href='/?verdict=GEM'>GEM</a> | <a href='/?verdict=RUG'>RUG</a> | <a href='/api/scans'>JSON API</a></p>"+
-        "<table><tr><th>Token</th><th>Jev</th><th>Confidence</th><th>Action</th><th>Liquidity</th><th>Dev %</th><th></th></tr>%s</table>"%"".join(trs)
+    body=(cards+"<p><a href='/'>All</a> | <a href='/?verdict=GEM'>GEM</a> | <a href='/?verdict=RUG'>RUG</a> | <a href='/api/scans'>JSON API</a></p>"+
+          "<table><tr><th>Token</th><th>Jev</th><th>Confidence</th><th>Action</th><th>Liquidity</th><th>Dev %</th><th></th></tr>%s</table>"%"".join(trs))
     return _html("Jev Gem Scan",body)
 
 
