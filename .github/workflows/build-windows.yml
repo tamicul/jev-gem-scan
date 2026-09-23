@@ -1,0 +1,53 @@
+name: Build Windows Scanner
+
+on:
+  push:
+    branches: ["dev/production-scanner"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install builder
+        run: python -m pip install --upgrade pip pyinstaller
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "$pwd\src"
+          python -m unittest discover -s tests -v
+      - name: Build EXE
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --onefile --name JevGemScanner --paths src windows_launcher.py
+      - name: Assemble portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package\data | Out-Null
+          Copy-Item dist\JevGemScanner.exe package\JevGemScanner.exe
+          @'
+          JEV GEM SCANNER - WINDOWS
+
+          1. Extract this ZIP to a normal folder such as Documents\JevGemScanner.
+          2. Double-click JevGemScanner.exe.
+          3. Keep the console window open while scanning.
+          4. The dashboard opens at http://127.0.0.1:8787.
+          5. Scanner data is saved in the data folder beside the EXE.
+
+          The packaged build starts in SHADOW mode. It observes real data and records
+          Jev decisions/outcomes without wallet access or trade execution.
+          '@ | Set-Content package\README-WINDOWS.txt
+          Compress-Archive -Path package\* -DestinationPath JevGemScanner-Windows.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JevGemScanner-Windows
+          path: JevGemScanner-Windows.zip
+          if-no-files-found: error
+          retention-days: 30
