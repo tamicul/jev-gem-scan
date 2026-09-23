@@ -74,7 +74,9 @@ def _detail_page(path, scan_id):
 
 
 def _html(title,body):
-    return """<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='refresh' content='20'><title>%s</title><style>body{font-family:system-ui;max-width:1200px;margin:30px auto;padding:0 16px;background:#101318;color:#e8edf2}a{color:#77bdfb}.cards{display:flex;gap:12px;flex-wrap:wrap}.cards b{background:#1b222c;padding:16px 24px;border-radius:10px}table{width:100%%;border-collapse:collapse;background:#171c23}th,td{padding:10px;border-bottom:1px solid #303844;text-align:left}.gem{color:#61d095;font-weight:700}.rug{color:#ff7272;font-weight:700}pre{white-space:pre-wrap;background:#171c23;padding:16px;border-radius:8px;overflow:auto}</style></head><body><h1>%s</h1>%s</body></html>"""%(html.escape(title),html.escape(title),body)
+    safe_title = html.escape(title)
+    template = """<!doctype html><html><head><meta charset='utf-8'><meta http-equiv='refresh' content='20'><title>{title}</title><style>body{{font-family:system-ui;max-width:1200px;margin:30px auto;padding:0 16px;background:#101318;color:#e8edf2}}a{{color:#77bdfb}}.cards{{display:flex;gap:12px;flex-wrap:wrap}}.cards b{{background:#1b222c;padding:16px 24px;border-radius:10px}}table{{width:100%;border-collapse:collapse;background:#171c23}}th,td{{padding:10px;border-bottom:1px solid #303844;text-align:left}}.gem{{color:#61d095;font-weight:700}}.rug{{color:#ff7272;font-weight:700}}pre{{white-space:pre-wrap;background:#171c23;padding:16px;border-radius:8px;overflow:auto}}</style></head><body><h1>{title}</h1>{body}</body></html>"""
+    return template.format(title=safe_title, body=body)
 
 
 def serve(db_path="data/gem_scan.db",host="127.0.0.1",port=8787):
