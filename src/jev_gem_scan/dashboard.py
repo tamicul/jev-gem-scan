@@ -55,8 +55,8 @@ def _page(path, verdict=None):
         trs.append("<tr><td>%s</td><td class='%s'>%s</td><td>%.2f</td><td>%s</td><td>%s</td><td>%s</td><td><a href='/scan?id=%s'>inspect</a></td></tr>" % (
             html.escape(r["symbol"] or "?"),cls,r["verdict"],r["confidence"] or 0,html.escape(r["action"] or ""),
             html.escape(str(f.get("liquidity_usd"))),html.escape(str(f.get("dev_wallet_pct"))),r["id"]))
-    body=(cards+"<p><a href='/'>All</a> | <a href='/?verdict=GEM'>GEM</a> | <a href='/?verdict=RUG'>RUG</a> | <a href='/api/scans'>JSON API</a></p>"+
-          "<table><tr><th>Token</th><th>Jev</th><th>Confidence</th><th>Action</th><th>Liquidity</th><th>Dev %</th><th></th></tr>%s</table>"%"".join(trs))
+    table = "<table><tr><th>Token</th><th>Jev</th><th>Confidence</th><th>Action</th><th>Liquidity</th><th>Dev %</th><th></th></tr>{rows}</table>".format(rows="".join(trs))
+    body=cards+"<p><a href='/'>All</a> | <a href='/?verdict=GEM'>GEM</a> | <a href='/?verdict=RUG'>RUG</a> | <a href='/api/scans'>JSON API</a></p>"+table
     return _html("Jev Gem Scan",body)
 
 
@@ -64,13 +64,14 @@ def _detail_page(path, scan_id):
     d=detail(path,scan_id)
     if not d: return _html("Not found","<h2>Scan not found</h2>")
     f,r=d["features"],d["result"]
-    evidence="".join("<tr><td>%s</td><td>%s</td><td>%s</td></tr>"%(html.escape(str(e.get("signal"))),html.escape(str(e.get("value"))),e.get("delta")) for e in r.get("evidence",[]))
-    outcomes="".join("<tr><td>%sh</td><td>%s</td><td>%s</td><td>%s</td></tr>"%(round(o["horizon_seconds"]/3600,1),o["return_pct"],o["price_now"],bool(o["pair_alive"])) for o in d["outcomes"])
-    body="<p><a href='/'>← dashboard</a></p><h2>%s — <span class='%s'>%s</span> %.2f</h2><p>%s</p>"%(html.escape(d.get("symbol") or "?"),"gem" if d["verdict"]=="GEM" else "rug",d["verdict"],d["confidence"] or 0,html.escape(d.get("reason") or ""))
-    body+="<h3>Observed snapshot</h3><pre>%s</pre>"%html.escape(json.dumps(f,indent=2,sort_keys=True))
-    body+="<h3>Jev evidence ledger</h3><table><tr><th>Signal</th><th>Observed</th><th>Contribution</th></tr>%s</table>"%evidence
-    body+="<h3>Measured outcomes</h3><table><tr><th>Horizon</th><th>Return %</th><th>Price</th><th>Pair alive</th></tr>%s</table>"%outcomes
-    return _html("Scan %s"%scan_id,body)
+    evidence="".join("<tr><td>{}</td><td>{}</td><td>{}</td></tr>".format(html.escape(str(e.get("signal"))),html.escape(str(e.get("value"))),e.get("delta")) for e in r.get("evidence",[]))
+    outcomes="".join("<tr><td>{}h</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(round(o["horizon_seconds"]/3600,1),o["return_pct"],o["price_now"],bool(o["pair_alive"])) for o in d["outcomes"])
+    cls="gem" if d["verdict"]=="GEM" else "rug"
+    body="<p><a href='/'>← dashboard</a></p><h2>{symbol} — <span class='{cls}'>{verdict}</span> {confidence:.2f}</h2><p>{reason}</p>".format(symbol=html.escape(d.get("symbol") or "?"),cls=cls,verdict=d["verdict"],confidence=d["confidence"] or 0,reason=html.escape(d.get("reason") or ""))
+    body+="<h3>Observed snapshot</h3><pre>{}</pre>".format(html.escape(json.dumps(f,indent=2,sort_keys=True)))
+    body+="<h3>Jev evidence ledger</h3><table><tr><th>Signal</th><th>Observed</th><th>Contribution</th></tr>{}</table>".format(evidence)
+    body+="<h3>Measured outcomes</h3><table><tr><th>Horizon</th><th>Return %</th><th>Price</th><th>Pair alive</th></tr>{}</table>".format(outcomes)
+    return _html("Scan {}".format(scan_id),body)
 
 
 def _html(title,body):
@@ -94,10 +95,10 @@ def serve(db_path="data/gem_scan.db",host="127.0.0.1",port=8787):
                     for x in data: x["features"]=_loads(x.pop("features_json")); x["result"]=_loads(x.pop("result_json"))
                     self._send(json.dumps(data),"application/json"); return
                 self._send("not found","text/plain",404)
-            except Exception as exc: self._send("dashboard error: %s"%html.escape(str(exc)),"text/plain",500)
+            except Exception as exc: self._send("dashboard error: {}".format(html.escape(str(exc))),"text/plain",500)
         def log_message(self,fmt,*args): pass
     server=ThreadingHTTPServer((host,port),Handler)
-    print("Jev dashboard: http://%s:%s"%(host,port)); server.serve_forever()
+    print("Jev dashboard: http://{}:{}".format(host,port)); server.serve_forever()
 
 
 def main():
