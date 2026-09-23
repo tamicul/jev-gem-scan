@@ -1,109 +1,48 @@
-"""
-CLI entrypoint.
-
-    python -m jev_gem_scan --launches 20 --seed 1 --mode shadow
-    python -m jev_gem_scan --launches 20 --seed 1 --mode active
-
-Streams N simulated launches through the router one by one, prints one line
-per launch, then a summary. Deterministic given --seed. No real trades.
-"""
-
-import argparse
-import time
-
+"""CLI for simulation and live scanning."""
+import argparse,time
+from random import Random
 from .generator import generate_launch
-from .router import route_launch, load_config
-from .logbook import log_scan, LOG_PATH
+from .router import route_launch,load_config
+from .logbook import log_scan,LOG_PATH
+from .scanner import scan_once,run_forever
 from . import __version__
 
-try:                                   # dedicated RNG so runs are reproducible
-    from random import Random
-except ImportError:                    # pragma: no cover
-    Random = None
-
-
 def build_parser():
-    ap = argparse.ArgumentParser(
-        prog="jev_gem_scan",
-        description="Jev Gem Scan — DEMO MVP. Scores simulated token launches "
-                    "GEM/RUG via a mocked decision model. No real trades.")
-    ap.add_argument("--launches", type=int, default=20, help="how many launches to simulate")
-    ap.add_argument("--seed", type=int, default=1, help="PRNG seed for reproducible runs")
-    ap.add_argument("--mode", choices=["shadow", "active"], help="override config mode")
-    ap.add_argument("--config", help="path to a config.yaml (default: repo config)")
-    ap.add_argument("--sleep", type=float, default=0.15, help="seconds between launches")
-    ap.add_argument("--no-log", action="store_true", help="do not append to gem_scan_log.jsonl")
-    ap.add_argument("--version", action="version", version="jev_gem_scan " + __version__)
-    return ap
+    ap=argparse.ArgumentParser(prog="jev_gem_scan",description="Jev Gem Scan: simulation and live scanner")
+    ap.add_argument("--source",choices=["sim","live"],default="sim"); ap.add_argument("--launches",type=int,default=20); ap.add_argument("--seed",type=int,default=1)
+    ap.add_argument("--mode",choices=["shadow","active"]); ap.add_argument("--config"); ap.add_argument("--sleep",type=float,default=.15); ap.add_argument("--no-log",action="store_true")
+    ap.add_argument("--chain"); ap.add_argument("--limit",type=int,default=30); ap.add_argument("--db",default="data/gem_scan.db"); ap.add_argument("--dedupe-seconds",type=int,default=900)
+    ap.add_argument("--watch",action="store_true"); ap.add_argument("--interval",type=int,default=30); ap.add_argument("--version",action="version",version="jev_gem_scan "+__version__); return ap
 
+def _print_live(rows,stats):
+    for f,r,a in rows:
+        if a=="error": print("[ERROR] %s"%r.get("error")); continue
+        print("[%s] %s/%s %s -> %s %.2f | %s | liq=%s vol1h=%s"%(a.upper(),f.get("chain_id"),f.get("symbol"),f.get("token_address"),r["verdict"],r["confidence"],r["reason"],f.get("liquidity_usd"),f.get("volume_h1")))
+    print("-- live summary -- "+" ".join("%s=%s"%x for x in stats.items()))
 
-def run(args):
-    rng = Random(args.seed)   # one seeded stream drives features AND telemetry
+def run_live(args,cfg):
+    kw=dict(limit=args.limit,chain=args.chain,db_path=args.db,dedupe_seconds=args.dedupe_seconds)
+    if args.watch:
+        try:
+            for rows,stats in run_forever(cfg,interval=args.interval,**kw): _print_live(rows,stats)
+        except KeyboardInterrupt: print("\nstopped")
+    else: _print_live(*scan_once(cfg,**kw))
 
-    config = load_config(args.config)
-    if args.mode:
-        config["mode"] = args.mode
-    mode = config.get("mode", "shadow")
-
-    print("== Jev Gem Scan v%s (DEMO - mocked decision model, no real trades) ==" % __version__)
-    print("mode=%s enabled=%s bypass_jev=%s seed=%d\n" %
-          (mode, config.get("enabled", True), config.get("bypass_jev", False), args.seed))
-
-    gems = rugs = alerts = 0
-    conf_sum = lat_sum = cost_sum = 0.0
-    scored = 0
-
+def run_sim(args,cfg):
+    rng=Random(args.seed); mode=cfg.get("mode","shadow"); gems=rugs=alerts=scored=0
     for _ in range(args.launches):
-        features = generate_launch(rng)
-        result, action = route_launch(features, config, rng)
-
-        if action == "bypass":
-            print("[bypass] %s -> (kill switch: no Jev call)" % features["symbol"])
-            time.sleep(args.sleep)
-            continue
-
-        if not args.no_log:
-            log_scan(features, result, mode)
-
-        scored += 1
-        conf_sum += result["confidence"]
-        lat_sum += result["latency_ms"]
-        cost_sum += result["cost_usd"]
-        if result["verdict"] == "GEM":
-            gems += 1
-        else:
-            rugs += 1
-
-        line = "%s -> %s (%.2f, %s) %dms $%.5f" % (
-            features["symbol"], result["verdict"], result["confidence"],
-            result["reason"], result["latency_ms"], result["cost_usd"])
-
-        if action == "shadow":
-            print("[shadow] " + line)
-        elif action == "alert":
-            alerts += 1
-            print("[ALERT]  " + line)
-        elif action == "suppress":
-            print("[active] (suppressed) " + line)
-
-        time.sleep(args.sleep)
-
-    print("\n-- summary --")
-    print("scanned:        %d" % scored)
-    print("GEM:            %d" % gems)
-    print("RUG:            %d" % rugs)
-    if mode == "active":
-        print("alerts fired:   %d" % alerts)
-    print("avg confidence: %.3f" % (conf_sum / scored if scored else 0))
-    print("avg latency:    %.0f ms" % (lat_sum / scored if scored else 0))
-    print("total sim cost: $%.5f" % cost_sum)
-    if scored and not args.no_log:
-        print("\nlog appended -> %s" % LOG_PATH)
-
+        f=generate_launch(rng); r,a=route_launch(f,cfg,rng)
+        if a=="bypass": print("[bypass] %s"%f["symbol"]); continue
+        if not args.no_log: log_scan(f,r,mode)
+        scored+=1; gems+=r["verdict"]=="GEM"; rugs+=r["verdict"]=="RUG"; alerts+=a=="alert"
+        print("[%s] %s -> %s (%.2f, %s)"%(a,f["symbol"],r["verdict"],r["confidence"],r["reason"])); time.sleep(args.sleep)
+    print("-- summary -- scanned=%d GEM=%d RUG=%d alerts=%d"%(scored,gems,rugs,alerts))
+    if scored and not args.no_log: print("log appended -> %s"%LOG_PATH)
 
 def main(argv=None):
-    run(build_parser().parse_args(argv))
+    args=build_parser().parse_args(argv); cfg=load_config(args.config)
+    if args.mode: cfg["mode"]=args.mode
+    print("== Jev Gem Scan v%s | source=%s mode=%s =="%(__version__,args.source,cfg.get("mode")))
+    (run_live if args.source=="live" else run_sim)(args,cfg)
 
-
-if __name__ == "__main__":
-    main()
+if __name__=="__main__": main()
